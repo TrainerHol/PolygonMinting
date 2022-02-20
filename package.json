@@ -1,0 +1,19 @@
+{
+  "name": "PolygonMinting",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "hardhat": "^2.8.4"
+  },
+  "devDependencies": {
+    "@maticnetwork/pos-portal": "^1.5.2",
+    "@openzeppelin/contracts": "^4.5.0"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
