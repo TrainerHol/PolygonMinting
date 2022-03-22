@@ -1,35 +1,27 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@maticnetwork/pos-portal/contracts/common/AccessControlMixin.sol";
-import "@maticnetwork/pos-portal/contracts/child/ChildToken/IChildToken.sol";
-import "@maticnetwork/pos-portal/contracts/common/NativeMetaTransaction.sol";
-import "@maticnetwork/pos-portal/contracts/common/ContextMixin.sol";
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {AccessControlMixin} from "../../common/AccessControlMixin.sol";
+import {IChildToken} from "./IChildToken.sol";
+import {NativeMetaTransaction} from "../../common/NativeMetaTransaction.sol";
+import {ContextMixin} from "../../common/ContextMixin.sol";
 
-contract GalleryChild is
+
+contract ChildMintableERC721 is
     ERC721,
-    ERC721Storage,
     IChildToken,
     AccessControlMixin,
     NativeMetaTransaction,
     ContextMixin
 {
     bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
-    mapping(uint256 => bool) public withdrawnTokens;
-    mapping(uint256 => bool) public hasRootMetadata;
+    mapping (uint256 => bool) public withdrawnTokens;
 
     // limit batching of tokens due to gas limit restrictions
     uint256 public constant BATCH_LIMIT = 20;
 
     event WithdrawnBatch(address indexed user, uint256[] tokenIds);
-    event TransferWithMetadata(
-        address indexed from,
-        address indexed to,
-        uint256 indexed tokenId,
-        bytes metaData
-    );
+    event TransferWithMetadata(address indexed from, address indexed to, uint256 indexed tokenId, bytes metaData);
 
     constructor(
         string memory name_,
@@ -46,8 +38,8 @@ contract GalleryChild is
     // never use msg.sender directly, use _msgSender() instead
     function _msgSender()
         internal
-        view
         override
+        view
         returns (address payable sender)
     {
         return ContextMixin.msgSender();
@@ -67,13 +59,14 @@ contract GalleryChild is
         override
         only(DEPOSITOR_ROLE)
     {
+
         // deposit single
         if (depositData.length == 32) {
             uint256 tokenId = abi.decode(depositData, (uint256));
             withdrawnTokens[tokenId] = false;
             _mint(user, tokenId);
 
-            // deposit batch
+        // deposit batch
         } else {
             uint256[] memory tokenIds = abi.decode(depositData, (uint256[]));
             uint256 length = tokenIds.length;
@@ -82,6 +75,7 @@ contract GalleryChild is
                 _mint(user, tokenIds[i]);
             }
         }
+
     }
 
     /**
@@ -92,11 +86,7 @@ contract GalleryChild is
      * @param tokenId tokenId to withdraw
      */
     function withdraw(uint256 tokenId) external {
-        require(
-            _msgSender() == ownerOf(tokenId),
-            "ChildMintableERC721: INVALID_TOKEN_OWNER"
-        );
-        require(hasRootMetadata[tokenId], "ChildMintableERC721: NO_METADATA");
+        require(_msgSender() == ownerOf(tokenId), "ChildMintableERC721: INVALID_TOKEN_OWNER");
         withdrawnTokens[tokenId] = true;
         _burn(tokenId);
     }
@@ -107,40 +97,27 @@ contract GalleryChild is
      * @param tokenIds tokenId list to withdraw
      */
     function withdrawBatch(uint256[] calldata tokenIds) external {
+
         uint256 length = tokenIds.length;
-        require(
-            length <= BATCH_LIMIT,
-            "ChildMintableERC721: EXCEEDS_BATCH_LIMIT"
-        );
+        require(length <= BATCH_LIMIT, "ChildMintableERC721: EXCEEDS_BATCH_LIMIT");
 
         // Iteratively burn ERC721 tokens, for performing
         // batch withdraw
         for (uint256 i; i < length; i++) {
+
             uint256 tokenId = tokenIds[i];
 
-            require(
-                _msgSender() == ownerOf(tokenId),
-                string(
-                    abi.encodePacked(
-                        "ChildMintableERC721: INVALID_TOKEN_OWNER ",
-                        tokenId
-                    )
-                )
-            );
-            require (hasRootMetadata[tokenId] == true, string(
-                    abi.encodePacked(
-                        "ChildMintableERC721: NO_ROOT_METADATA ",
-                        tokenId
-                    )
-                ));
+            require(_msgSender() == ownerOf(tokenId), string(abi.encodePacked("ChildMintableERC721: INVALID_TOKEN_OWNER ", tokenId)));
             withdrawnTokens[tokenId] = true;
             _burn(tokenId);
+
         }
 
         // At last emit this event, which will be used
         // in MintableERC721 predicate contract on L1
         // while verifying burn proof
         emit WithdrawnBatch(_msgSender(), tokenIds);
+
     }
 
     /**
@@ -152,22 +129,15 @@ contract GalleryChild is
      * @param tokenId tokenId to withdraw
      */
     function withdrawWithMetadata(uint256 tokenId) external {
-        require(
-            _msgSender() == ownerOf(tokenId),
-            "ChildMintableERC721: INVALID_TOKEN_OWNER"
-        );
+
+        require(_msgSender() == ownerOf(tokenId), "ChildMintableERC721: INVALID_TOKEN_OWNER");
         withdrawnTokens[tokenId] = true;
-        hasRootMetadata[tokenId] = true;
 
         // Encoding metadata associated with tokenId & emitting event
-        emit TransferWithMetadata(
-            ownerOf(tokenId),
-            address(0),
-            tokenId,
-            this.encodeTokenMetadata(tokenId)
-        );
+        emit TransferWithMetadata(ownerOf(tokenId), address(0), tokenId, this.encodeTokenMetadata(tokenId));
 
         _burn(tokenId);
+
     }
 
     /**
@@ -179,16 +149,13 @@ contract GalleryChild is
      *
      * @param tokenId Token for which URI to be fetched
      */
-    function encodeTokenMetadata(uint256 tokenId)
-        external
-        view
-        virtual
-        returns (bytes memory)
-    {
+    function encodeTokenMetadata(uint256 tokenId) external view virtual returns (bytes memory) {
+
         // You're always free to change this default implementation
         // and pack more data in byte array which can be decoded back
         // in L1
         return abi.encode(tokenURI(tokenId));
+
     }
 
     /**
@@ -199,36 +166,8 @@ contract GalleryChild is
      * @param user user for whom tokens are being minted
      * @param tokenId tokenId to mint
      */
-    function mint(
-        address user,
-        uint256 tokenId,
-        string memory metadata
-    ) public only(DEFAULT_ADMIN_ROLE) {
-        require(
-            !withdrawnTokens[tokenId],
-            "ChildMintableERC721: TOKEN_EXISTS_ON_ROOT_CHAIN"
-        );
+    function mint(address user, uint256 tokenId) public only(DEFAULT_ADMIN_ROLE) {
+        require(!withdrawnTokens[tokenId], "ChildMintableERC721: TOKEN_EXISTS_ON_ROOT_CHAIN");
         _mint(user, tokenId);
-        updateTokenURI(tokenId, metadata);
-    }
-
-    function updateTokenURI(uint256 tokenId, string memory tokenURI)
-        external
-        only(DEFAULT_ADMIN_ROLE)
-    {
-        _setTokenURI(tokenId, tokenURI);
-    }
-
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (string memory)
-    {
-        require(
-            _exists(tokenId),
-            "ERC721URIStorage: URI query for nonexistent token"
-        );
-        return _tokenURI = _tokenURIs[tokenId];
     }
 }
