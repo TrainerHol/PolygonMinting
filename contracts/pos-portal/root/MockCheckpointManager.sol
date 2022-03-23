@@ -1,6 +1,6 @@
-pragma solidity 0.6.6;
+pragma solidity ^0.8.4;
 
-import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
+import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {ICheckpointManager} from "./ICheckpointManager.sol";
 
 /**
@@ -16,7 +16,7 @@ contract MockCheckpointManager is ICheckpointManager {
             root: rootHash,
             start: start,
             end: end,
-            createdAt: now,
+            createdAt: block.timestamp,
             proposer: msg.sender
         });
 

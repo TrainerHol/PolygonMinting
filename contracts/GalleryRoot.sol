@@ -3,14 +3,14 @@ pragma solidity 0.8.4;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@maticnetwork/pos-portal/contracts/common/AccessControlMixin.sol";
-import "@maticnetwork/pos-portal/contracts/common/NativeMetaTransaction.sol";
-import "@maticnetwork/pos-portal/contracts/common/ContextMixin.sol";
-import "@maticnetwork/pos-portal/contracts/root/RootToken/IMintableERC721.sol";
+import "./pos-portal/common/AccessControlMixin.sol";
+import "./pos-portal/common/NativeMetaTransaction.sol";
+import "./pos-portal/common/ContextMixin.sol";
+import "./pos-portal/root/RootToken/IMintableERC721.sol";
 
 contract DummyMintableERC721 is
     ERC721,
-    ERC721Storage,
+    ERC721URIStorage,
     AccessControlMixin,
     NativeMetaTransaction,
     IMintableERC721,
@@ -19,7 +19,7 @@ contract DummyMintableERC721 is
     bytes32 public constant PREDICATE_ROLE = keccak256("PREDICATE_ROLE");
 
     constructor(string memory name_, string memory symbol_)
-        public
+        
         ERC721(name_, symbol_)
     {
         _setupContractId("DummyMintableERC721");
@@ -32,7 +32,7 @@ contract DummyMintableERC721 is
         internal
         view
         override
-        returns (address payable sender)
+        returns (address sender)
     {
         return ContextMixin.msgSender();
     }
@@ -84,18 +84,42 @@ contract DummyMintableERC721 is
         setTokenMetadata(tokenId, metaData);
     }
 
-    function updateTokenURI(uint56 tokenId, string memory tokenURI)
+    function updateTokenURI(uint56 tokenId, string memory uri)
     external only(DEFAULT_ADMIN_ROLE)
     {
-        _setTokenURI(tokenId, tokenURI);
+        _setTokenURI(tokenId, uri);
     }
-
-    }
-
     /**
      * @dev See {IMintableERC721-exists}.
      */
     function exists(uint256 tokenId) external view override returns (bool) {
         return _exists(tokenId);
     }
-}
+
+        function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+        super._burn(tokenId);
+    }
+
+function tokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (string memory)
+    {
+        return super.tokenURI(tokenId);
+    }
+
+        function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721, AccessControl, IERC165)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
+
+
+    }
+
+
+

@@ -3,14 +3,14 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@maticnetwork/pos-portal/contracts/common/AccessControlMixin.sol";
-import "@maticnetwork/pos-portal/contracts/child/ChildToken/IChildToken.sol";
-import "@maticnetwork/pos-portal/contracts/common/NativeMetaTransaction.sol";
-import "@maticnetwork/pos-portal/contracts/common/ContextMixin.sol";
+import "./pos-portal/common/AccessControlMixin.sol";
+import "./pos-portal/child/ChildToken/IChildToken.sol";
+import "./pos-portal/common/NativeMetaTransaction.sol";
+import "./pos-portal/common/ContextMixin.sol";
 
 contract GalleryChild is
     ERC721,
-    ERC721Storage,
+    ERC721URIStorage,
     IChildToken,
     AccessControlMixin,
     NativeMetaTransaction,
@@ -35,11 +35,15 @@ contract GalleryChild is
         string memory name_,
         string memory symbol_,
         address childChainManager
-    ) public ERC721(name_, symbol_) {
+    ) ERC721(name_, symbol_) {
         _setupContractId("ChildMintableERC721");
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(DEPOSITOR_ROLE, childChainManager);
         _initializeEIP712(name_);
+    }
+
+    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+        super._burn(tokenId);
     }
 
     // This is to support Native meta transactions
@@ -48,7 +52,7 @@ contract GalleryChild is
         internal
         view
         override
-        returns (address payable sender)
+        returns (address sender)
     {
         return ContextMixin.msgSender();
     }
@@ -212,23 +216,29 @@ contract GalleryChild is
         updateTokenURI(tokenId, metadata);
     }
 
-    function updateTokenURI(uint256 tokenId, string memory tokenURI)
-        external
+    function updateTokenURI(uint256 tokenId, string memory uri)
+        public
         only(DEFAULT_ADMIN_ROLE)
     {
-        _setTokenURI(tokenId, tokenURI);
+        _setTokenURI(tokenId, uri);
     }
 
-    function tokenURI(uint256 tokenId)
+function tokenURI(uint256 tokenId)
         public
         view
         override(ERC721, ERC721URIStorage)
         returns (string memory)
     {
-        require(
-            _exists(tokenId),
-            "ERC721URIStorage: URI query for nonexistent token"
-        );
-        return _tokenURI = _tokenURIs[tokenId];
+        return super.tokenURI(tokenId);
     }
+
+        function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721, AccessControl)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
+    
 }
