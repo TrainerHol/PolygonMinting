@@ -36,7 +36,7 @@ contract GalleryChild is
         string memory symbol_,
         address childChainManager
     ) ERC721(name_, symbol_) {
-        _setupContractId("ChildMintableERC721");
+        _setupContractId("Hol-PoS");
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(DEPOSITOR_ROLE, childChainManager);
         _initializeEIP712(name_);

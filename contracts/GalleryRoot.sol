@@ -8,7 +8,7 @@ import "./pos-portal/common/NativeMetaTransaction.sol";
 import "./pos-portal/common/ContextMixin.sol";
 import "./pos-portal/root/RootToken/IMintableERC721.sol";
 
-contract DummyMintableERC721 is
+contract GalleryRoot is
     ERC721,
     ERC721URIStorage,
     AccessControlMixin,
@@ -22,7 +22,7 @@ contract DummyMintableERC721 is
         
         ERC721(name_, symbol_)
     {
-        _setupContractId("DummyMintableERC721");
+        _setupContractId("Hol-Mainnet");
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(PREDICATE_ROLE, _msgSender());
         _initializeEIP712(name_);
