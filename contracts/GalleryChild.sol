@@ -2,7 +2,6 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "./pos-portal/common/AccessControlMixin.sol";
 import "./pos-portal/child/ChildToken/IChildToken.sol";
 import "./pos-portal/common/NativeMetaTransaction.sol";
@@ -10,15 +9,15 @@ import "./pos-portal/common/ContextMixin.sol";
 
 contract GalleryChild is
     ERC721,
-    ERC721URIStorage,
     IChildToken,
     AccessControlMixin,
     NativeMetaTransaction,
     ContextMixin
 {
+    using Strings for uint256;
     bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
     mapping(uint256 => bool) public withdrawnTokens;
-    mapping(uint256 => bool) public hasRootMetadata;
+    string uri;
 
     // limit batching of tokens due to gas limit restrictions
     uint256 public constant BATCH_LIMIT = 20;
@@ -42,18 +41,13 @@ contract GalleryChild is
         _initializeEIP712(name_);
     }
 
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+    function _burn(uint256 tokenId) internal override(ERC721) {
         super._burn(tokenId);
     }
 
     // This is to support Native meta transactions
     // never use msg.sender directly, use _msgSender() instead
-    function _msgSender()
-        internal
-        view
-        override
-        returns (address sender)
-    {
+    function _msgSender() internal view override returns (address sender) {
         return ContextMixin.msgSender();
     }
 
@@ -100,7 +94,6 @@ contract GalleryChild is
             _msgSender() == ownerOf(tokenId),
             "ChildMintableERC721: INVALID_TOKEN_OWNER"
         );
-        require(hasRootMetadata[tokenId], "ChildMintableERC721: NO_METADATA");
         withdrawnTokens[tokenId] = true;
         _burn(tokenId);
     }
@@ -131,12 +124,6 @@ contract GalleryChild is
                     )
                 )
             );
-            require (hasRootMetadata[tokenId] == true, string(
-                    abi.encodePacked(
-                        "ChildMintableERC721: NO_ROOT_METADATA ",
-                        tokenId
-                    )
-                ));
             withdrawnTokens[tokenId] = true;
             _burn(tokenId);
         }
@@ -161,7 +148,6 @@ contract GalleryChild is
             "ChildMintableERC721: INVALID_TOKEN_OWNER"
         );
         withdrawnTokens[tokenId] = true;
-        hasRootMetadata[tokenId] = true;
 
         // Encoding metadata associated with tokenId & emitting event
         emit TransferWithMetadata(
@@ -203,36 +189,43 @@ contract GalleryChild is
      * @param user user for whom tokens are being minted
      * @param tokenId tokenId to mint
      */
-    function mint(
-        address user,
-        uint256 tokenId,
-        string memory metadata
-    ) public only(DEFAULT_ADMIN_ROLE) {
+    function mint(address user, uint256 tokenId)
+        public
+        only(DEFAULT_ADMIN_ROLE)
+    {
         require(
             !withdrawnTokens[tokenId],
             "ChildMintableERC721: TOKEN_EXISTS_ON_ROOT_CHAIN"
         );
         _mint(user, tokenId);
-        updateTokenURI(tokenId, metadata);
     }
 
-    function updateTokenURI(uint256 tokenId, string memory uri)
+    function updateTokenURI(string memory _uri)
         public
         only(DEFAULT_ADMIN_ROLE)
     {
-        _setTokenURI(tokenId, uri);
+        uri = _uri;
     }
 
-function tokenURI(uint256 tokenId)
+    function tokenURI(uint256 tokenId)
         public
         view
-        override(ERC721, ERC721URIStorage)
+        override(ERC721)
         returns (string memory)
     {
-        return super.tokenURI(tokenId);
+        require(
+            _exists(tokenId),
+            "ERC721Metadata: URI query for nonexistent token"
+        );
+
+        string memory metadata = uri;
+        metadata = string(abi.encodePacked(metadata, tokenId.toString()));
+        metadata = string(abi.encodePacked(metadata, ".json"));
+
+        return metadata;
     }
 
-        function supportsInterface(bytes4 interfaceId)
+    function supportsInterface(bytes4 interfaceId)
         public
         view
         override(ERC721, AccessControl)
@@ -240,5 +233,4 @@ function tokenURI(uint256 tokenId)
     {
         return super.supportsInterface(interfaceId);
     }
-    
 }

@@ -10,30 +10,25 @@ import "./pos-portal/root/RootToken/IMintableERC721.sol";
 
 contract GalleryRoot is
     ERC721,
-    ERC721URIStorage,
     AccessControlMixin,
     NativeMetaTransaction,
     IMintableERC721,
     ContextMixin
 {
+    using Strings for uint256;
     bytes32 public constant PREDICATE_ROLE = keccak256("PREDICATE_ROLE");
+    string uri;
 
     constructor(string memory name_, string memory symbol_)
-        
         ERC721(name_, symbol_)
     {
-        _setupContractId("Hol-Mainnet");
+        _setupContractId("Hol");
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(PREDICATE_ROLE, _msgSender());
         _initializeEIP712(name_);
     }
 
-    function _msgSender()
-        internal
-        view
-        override
-        returns (address sender)
-    {
+    function _msgSender() internal view override returns (address sender) {
         return ContextMixin.msgSender();
     }
 
@@ -49,26 +44,6 @@ contract GalleryRoot is
     }
 
     /**
-     * If you're attempting to bring metadata associated with token
-     * from L2 to L1, you must implement this method, to be invoked
-     * when minting token back on L1, during exit
-     */
-    function setTokenMetadata(uint256 tokenId, bytes memory data)
-        internal
-        virtual
-    {
-        // This function should decode metadata obtained from L2
-        // and attempt to set it for this `tokenId`
-        //
-        // Following is just a default implementation, feel
-        // free to define your own encoding/ decoding scheme
-        // for L2 -> L1 token metadata transfer
-        string memory uri = abi.decode(data, (string));
-
-        _setTokenURI(tokenId, uri);
-    }
-
-    /**
      * @dev See {IMintableERC721-mint}.
      *
      * If you're attempting to bring metadata associated with token
@@ -80,15 +55,15 @@ contract GalleryRoot is
         bytes calldata metaData
     ) external override only(PREDICATE_ROLE) {
         _mint(user, tokenId);
-
-        setTokenMetadata(tokenId, metaData);
     }
 
-    function updateTokenURI(uint56 tokenId, string memory uri)
-    external only(DEFAULT_ADMIN_ROLE)
+    function updateTokenURI(string memory _uri)
+        external
+        only(DEFAULT_ADMIN_ROLE)
     {
-        _setTokenURI(tokenId, uri);
+        uri = _uri;
     }
+
     /**
      * @dev See {IMintableERC721-exists}.
      */
@@ -96,20 +71,29 @@ contract GalleryRoot is
         return _exists(tokenId);
     }
 
-        function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+    function _burn(uint256 tokenId) internal override(ERC721) {
         super._burn(tokenId);
     }
 
-function tokenURI(uint256 tokenId)
+    function tokenURI(uint256 tokenId)
         public
         view
-        override(ERC721, ERC721URIStorage)
+        override(ERC721)
         returns (string memory)
     {
-        return super.tokenURI(tokenId);
+        require(
+            _exists(tokenId),
+            "ERC721Metadata: URI query for nonexistent token"
+        );
+
+        string memory metadata = uri;
+        metadata = string(abi.encodePacked(metadata, tokenId.toString()));
+        metadata = string(abi.encodePacked(metadata, ".json"));
+
+        return metadata;
     }
 
-        function supportsInterface(bytes4 interfaceId)
+    function supportsInterface(bytes4 interfaceId)
         public
         view
         override(ERC721, AccessControl, IERC165)
@@ -117,9 +101,4 @@ function tokenURI(uint256 tokenId)
     {
         return super.supportsInterface(interfaceId);
     }
-
-
-    }
-
-
-
+}
